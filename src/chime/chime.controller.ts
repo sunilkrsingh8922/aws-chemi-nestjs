@@ -1,0 +1,35 @@
+// src/chime/chime.controller.ts
+import { Controller, Post, Body, Query } from '@nestjs/common';
+import { ChimeService } from './chime.service';
+
+@Controller('chime')
+export class ChimeController {
+  constructor(private readonly chimeService: ChimeService) {}
+
+  @Post('createMeeting')
+  async createMeeting() {
+    return await this.chimeService.createMeeting();
+  }
+
+    @Post('createAtendee')
+  async createAtendee(@Body('meetingId') meetingId,@Body('userId') userId) {
+    console.log("meeting id",meetingId)
+    return await this.chimeService.createAtendee(meetingId,userId);
+  }
+
+  // @Post('createAttendee')
+  // async createAttendee(@Body() body: { MeetingId: string; ExternalUserId: string }) {
+  //   const { MeetingId, ExternalUserId } = body;
+  //   return await this.chimeService.createAttendee(MeetingId, ExternalUserId);
+  // }
+
+  @Post('call')
+  async call(@Body('name') name: string, @Body('fcmToken') fcmToken: string) {
+    return await this.chimeService.call({ name, fcmToken });
+  }
+
+  @Post('fcmStatus')
+  async fcmStatus(@Body('fcmToken') fcmToken?: string) {
+    return await this.chimeService.fcmStatus(fcmToken);
+  }
+}

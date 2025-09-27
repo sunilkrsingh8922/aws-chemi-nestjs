@@ -7,6 +7,21 @@ export interface UserRecord {
   fcmToken?: string;
 }
 
+export const SavedUser = [
+  {
+    "id":1,
+    "username": "abi",
+    "deviceId": "dev-1758948585545-android",
+    "fcmToken": "db-uqt46LSfktV9YU-FXI4:APA91bGp3AtzT4p4cPq9NBmhhx4TVF6_Tpr6RxYhfNbPnEfNc8COTknXMECSYdAxLrUEknY31-pbUA0So7DXDDNMBDDclyS0O-0AEEPdc88iGkmZUP8LVKE"
+  },
+  {
+    "id":2,
+    "username": "sunil",
+    "deviceId": "dev-1758881360486-android",
+    "fcmToken": "fY2IThvyQnC0pkYf4XL7fC:APA91bFldbD771PFyOaJSr2_FDgJ7CnyfWBfZKXKpPmaUr_qleN0aNFfGLJ6KhSSkLB2cQjBa4OuKjlaMCnS3uDbol_afxMIHVQ9iLwEfNV7Cz3GIJO1COM"
+  }
+]
+
 @Injectable()
 export class UsersService {
   private readonly usersByUsername: Map<string, UserRecord> = new Map();
@@ -42,10 +57,9 @@ export class UsersService {
     return { items, nextCursor };
   }
 
-  all(): UserRecord[] {
-    return this.insertionOrder
-      .map((u) => this.usersByUsername.get(u))
-      .filter((u): u is UserRecord => Boolean(u));
+  all() {
+    return SavedUser
+
   }
 }
 

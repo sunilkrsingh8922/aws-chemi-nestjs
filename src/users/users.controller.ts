@@ -26,13 +26,13 @@ export class UsersController {
     return user;
   }
 
-  @Get('list')
-  list(@Query('limit') limit?: string, @Query('cursor') cursor?: string) {
-    const lim = limit ? parseInt(limit, 10) : 10;
-    return this.usersService.list(lim, cursor);
-  }
+  // @Get('list')
+  // list(@Query('limit') limit?: string, @Query('cursor') cursor?: string) {
+  //   const lim = limit ? parseInt(limit, 10) : 10;
+  //   return this.usersService.list(lim, cursor);
+  // }
 
-  @Get('all')
+  @Get('list')
   all() {
     return this.usersService.all();
   }

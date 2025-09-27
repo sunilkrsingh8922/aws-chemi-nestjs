@@ -1,11 +1,12 @@
 // src/chime/chime.service.ts
-import { ChimeSDKMeetingsClient, CreateAttendeeCommand, CreateMeetingCommand } from '@aws-sdk/client-chime-sdk-meetings';
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { ChimeSDKMeetingsClient, CreateAttendeeCommand, CreateMeetingCommand, CreateMeetingCommandOutput } from '@aws-sdk/client-chime-sdk-meetings';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as AWS from 'aws-sdk';
 import * as admin from 'firebase-admin';
-import { v4 as uuidv4 } from 'uuid';
-
+import { AcceptMeeting, CreateCallMeeting, INotification } from './dto/createCall.dto';
+import { SavedUser } from 'src/users/users.service';
+const meetings:Record<string,CreateMeetingCommandOutput['Meeting']> = {}
 
 @Injectable()
 export class ChimeService {
@@ -56,9 +57,9 @@ export class ChimeService {
     });
   }
 
-  async createMeeting() {
+  async createMeeting(token:string) {
     const input = { // CreateMeetingRequest
-      ClientRequestToken: "apple" as string, // required
+      ClientRequestToken: token+Math.round(Math.random()*10),
       MediaRegion: 'us-east-1',
       ExternalMeetingId: "Public", // required
 
@@ -80,34 +81,38 @@ export class ChimeService {
   }
 
   async createAtendee(meetingId: string, name: string) {
-    console.log({ meetingId })
     const attendeeResponse = await this.chime.send(
       new CreateAttendeeCommand({
         MeetingId: meetingId,
-        ExternalUserId: name ?? "Amil",
+        ExternalUserId: name,
       })
     );
     return attendeeResponse
   }
 
-  async call(user: any) {
-    // const meeting = await this.createMeeting()
-    // const meetingId = meeting.Meeting?.MeetingId!
-    var meeting;
-    var meetingId ;
-    if(user.meeting.Meeting?.MeetingId ==null) {
-     meeting = await this.createMeeting()
-    } else {
-      meeting = user.meeting.Meeting;
-    }
+  async call(createCallMeeting: CreateCallMeeting) {
+    const {username,attendeeId}=createCallMeeting;
+    const attendeUser=SavedUser.find((s)=>s.id==+attendeeId);
+    if(!attendeUser) throw new NotFoundException({message:"Attendee not found"})
+    const {Meeting} =  await this.createMeeting(username+attendeeId);
+    console.log({Meeting})
+    if(!Meeting?.MeetingId) throw new BadRequestException({message:"Server error exceptions"});
+    const meetingId=Meeting!.MeetingId!;
+    meetings[Meeting.MeetingId] = Meeting
+    const {Attendee} = await this.createAtendee(meetingId!, username);
 
-    meetingId = meeting.Meeting?.MeetingId!
-    const atendee = await this.createAtendee(meetingId, user.name)
-    await this.sendPushNotification(meetingId, user.fcmToken, user.name)
+    await this.sendPushNotification({
+      name:attendeUser.username,
+      fcmToken:attendeUser.fcmToken,
+      meetingId,
+    });
+
     return {
-      meeting, atendee
-    }
+      Meeting,
+      Attendee,
+    };
   }
+
 
   async fcmStatus(deviceToken?: string) {
     const initialized = admin.apps.length > 0;
@@ -127,20 +132,21 @@ export class ChimeService {
     return { initialized, projectId };
   }
 
-  async sendPushNotification(meetingId: string, deviceToken: string, name?: string) {
-    if (!deviceToken) {
-      throw new BadRequestException('Missing device token for FCM');
-    }
-    if (!admin.apps.length) {
-      throw new BadRequestException('Firebase Admin not initialized. Provide GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_* env vars.');
-    }
+  async sendPushNotification(notification:INotification) {
+    const {name,fcmToken,meetingId}=notification
+    // if (!deviceToken) {
+    //   throw new BadRequestException('Missing device token for FCM');
+    // }
+    // if (!admin.apps.length) {
+    //   throw new BadRequestException('Firebase Admin not initialized. Provide GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_* env vars.');
+    // }
 
     const callerName = name ?? 'Unknown';
     const title = 'Incoming Chime Call';
     const body = `${callerName} invited you. Join meeting ${meetingId}`;
 
     const message: admin.messaging.Message = {
-      token: deviceToken,
+      token: fcmToken,
       notification: {
         title,
         body,
@@ -174,12 +180,14 @@ export class ChimeService {
       const response = await admin.messaging().send(message);
       return { messageId: response };
     } catch (err: any) {
-      // Surface clear error to client instead of generic 500
       throw new BadRequestException(`FCM send failed: ${err?.message ?? 'unknown error'}`);
     }
   }
 
-  async acceptCall(meetingId, name) {
-    return this.createAtendee(meetingId, name)
+  async acceptCall(accept:AcceptMeeting) {
+    const {meetingId,name}=accept;
+    const {Attendee} = await this.createAtendee(meetingId, name)
+    const Meeting = meetings[meetingId];
+    return {Attendee,Meeting}
   }
 }

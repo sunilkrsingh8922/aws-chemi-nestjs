@@ -11,14 +11,14 @@ export const SavedUser = [
   {
     "id":1,
     "username": "abi",
-    "deviceId": "dev-1758948585545-android",
-    "fcmToken": "db-uqt46LSfktV9YU-FXI4:APA91bGp3AtzT4p4cPq9NBmhhx4TVF6_Tpr6RxYhfNbPnEfNc8COTknXMECSYdAxLrUEknY31-pbUA0So7DXDDNMBDDclyS0O-0AEEPdc88iGkmZUP8LVKE"
+    "deviceId": "hipster-1bd26",
+    "fcmToken": "f5HJxAeSSRWpfWFSN8o1oM:APA91bFG7ApYJX8-OP6HWio1s4OSMKApD5eyBE4jmoH5jrUaPLJk3RyZAOGeY_QWyOnQFCttBpbw-JPfiIOGuZiBM1_X6jlvUVMsdDk84s9yKpjQFF9cris"
   },
   {
     "id":2,
     "username": "sunil",
-    "deviceId": "dev-1758881360486-android",
-    "fcmToken": "fY2IThvyQnC0pkYf4XL7fC:APA91bFldbD771PFyOaJSr2_FDgJ7CnyfWBfZKXKpPmaUr_qleN0aNFfGLJ6KhSSkLB2cQjBa4OuKjlaMCnS3uDbol_afxMIHVQ9iLwEfNV7Cz3GIJO1COM"
+    "deviceId": "hipster-1bd26",
+    "fcmToken": "cLozKptYQSWv6QeFpI0c4o:APA91bEFQFTvvWZpIDUiB-xQNNiw41C2iciNwHMy3h2Jmdl31tzlFunBos7_yjha0TSZgbcuObKqdHdsatFKO6vcQkjmr9Xw6Sfd68V7AOMcpARuDhDqhsQ"
   }
 ]
 

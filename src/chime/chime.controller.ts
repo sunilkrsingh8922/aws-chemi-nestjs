@@ -18,12 +18,6 @@ export class ChimeController {
     return await this.chimeService.createAtendee(meetingId,userId);
   }
 
-  // @Post('createAttendee')
-  // async createAttendee(@Body() body: { MeetingId: string; ExternalUserId: string }) {
-  //   const { MeetingId, ExternalUserId } = body;
-  //   return await this.chimeService.createAttendee(MeetingId, ExternalUserId);
-  // }
-
   @Post('call')
   async call(@Body() body:CreateCallMeeting) {
     return await this.chimeService.call(body);

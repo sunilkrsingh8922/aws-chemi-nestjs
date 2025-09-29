@@ -6,11 +6,14 @@ import * as AWS from 'aws-sdk';
 import * as admin from 'firebase-admin';
 import { AcceptMeeting, CreateCallMeeting, INotification } from './dto/createCall.dto';
 import { SavedUser } from 'src/users/users.service';
+import { v4 as uuidv4 } from 'uuid';
+
+
 const meetings:Record<string,CreateMeetingCommandOutput['Meeting']> = {}
 
 @Injectable()
 export class ChimeService {
-  private meetings: Record<string, any> = {};
+  // private meetings: Record<string, any> = {};
   chime: ChimeSDKMeetingsClient;
   constructor(private readonly configService: ConfigService
   ) {
@@ -59,7 +62,7 @@ export class ChimeService {
 
   async createMeeting(token:string) {
     const input = { // CreateMeetingRequest
-      ClientRequestToken: token+Math.round(Math.random()*10),
+      ClientRequestToken: uuidv4() ,
       MediaRegion: 'us-east-1',
       ExternalMeetingId: "Public", // required
 
@@ -80,38 +83,20 @@ export class ChimeService {
     return response;
   }
 
+
   async createAtendee(meetingId: string, name: string) {
+  const randomName = ["aman","sunil","amil","preet","ritik"]
+
     const attendeeResponse = await this.chime.send(
       new CreateAttendeeCommand({
         MeetingId: meetingId,
-        ExternalUserId: name,
+        ExternalUserId:randomName[Math.floor(Math.random()*5)],
       })
     );
     return attendeeResponse
   }
 
-  async call(createCallMeeting: CreateCallMeeting) {
-    const {username,attendeeId}=createCallMeeting;
-    const attendeUser=SavedUser.find((s)=>s.id==+attendeeId);
-    if(!attendeUser) throw new NotFoundException({message:"Attendee not found"})
-    const {Meeting} =  await this.createMeeting(username+attendeeId);
-    console.log({Meeting})
-    if(!Meeting?.MeetingId) throw new BadRequestException({message:"Server error exceptions"});
-    const meetingId=Meeting!.MeetingId!;
-    meetings[Meeting.MeetingId] = Meeting
-    const {Attendee} = await this.createAtendee(meetingId!, username);
-
-    await this.sendPushNotification({
-      name:attendeUser.username,
-      fcmToken:attendeUser.fcmToken,
-      meetingId,
-    });
-
-    return {
-      Meeting,
-      Attendee,
-    };
-  }
+ 
 
 
   async fcmStatus(deviceToken?: string) {
@@ -183,11 +168,35 @@ export class ChimeService {
       throw new BadRequestException(`FCM send failed: ${err?.message ?? 'unknown error'}`);
     }
   }
+   async call(createCallMeeting: CreateCallMeeting) {
+    const {username,attendeeId}=createCallMeeting;
+    const attendeUser=SavedUser.find((s)=>s.id==+attendeeId);
+    if(!attendeUser) throw new NotFoundException({message:"Attendee not found"})
+    const {Meeting} =  await this.createMeeting(username+attendeeId);
+    if(!Meeting?.MeetingId) throw new BadRequestException({message:"Server error exceptions"});
+    const meetingId=Meeting!.MeetingId!;
+    meetings[meetingId] = Meeting
+    console.log(" calling with meeting id",meetingId)
+    if(!meetingId) throw new BadRequestException({message:"Meeting not found"})
+    const {Attendee} = await this.createAtendee(meetingId!, "caller");
+
+    await this.sendPushNotification({
+      name:attendeUser.username,
+      fcmToken:attendeUser.fcmToken,
+      meetingId,
+    });
+
+    return {
+      Meeting,
+      Attendee,
+    };
+  }
 
   async acceptCall(accept:AcceptMeeting) {
     const {meetingId,name}=accept;
     const {Attendee} = await this.createAtendee(meetingId, name)
     const Meeting = meetings[meetingId];
+    console.log("Joining call with",Meeting?.MeetingId,"and atendee ",Attendee?.AttendeeId)
     return {Attendee,Meeting}
   }
 }

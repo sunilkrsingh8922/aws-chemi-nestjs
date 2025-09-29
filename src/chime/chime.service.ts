@@ -1,5 +1,5 @@
 // src/chime/chime.service.ts
-import { ChimeSDKMeetingsClient, CreateAttendeeCommand, CreateMeetingCommand, CreateMeetingCommandOutput } from '@aws-sdk/client-chime-sdk-meetings';
+import { ChimeSDKMeetingsClient, CreateAttendeeCommand, CreateMeetingCommand, CreateMeetingCommandOutput, CreateMeetingWithAttendeesCommand, GetMeetingCommand, ListAttendeesCommand } from '@aws-sdk/client-chime-sdk-meetings';
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as AWS from 'aws-sdk';
@@ -9,7 +9,7 @@ import { SavedUser } from 'src/users/users.service';
 import { v4 as uuidv4 } from 'uuid';
 
 
-const meetings:Record<string,CreateMeetingCommandOutput['Meeting']> = {}
+const meetings: Record<string, CreateMeetingCommandOutput['Meeting']> = {}
 
 @Injectable()
 export class ChimeService {
@@ -60,43 +60,88 @@ export class ChimeService {
     });
   }
 
-  async createMeeting(token:string) {
-    const input = { // CreateMeetingRequest
-      ClientRequestToken: uuidv4() ,
-      MediaRegion: 'us-east-1',
-      ExternalMeetingId: "Public", // required
+  // async createMeeting(token:string) {
+  //   const input = { // CreateMeetingRequest
+  //     ClientRequestToken: uuidv4() ,
+  //     MediaRegion: 'us-east-1',
+  //     ExternalMeetingId: "Public", // required
 
+  //     MeetingFeatures: { // MeetingFeaturesConfiguration
+  //       Audio: { // AudioFeatures
+  //         EchoReduction: "AVAILABLE",
+  //       },
+  //       Video: { // VideoFeatures
+  //         MaxResolution: "HD",
+  //       },
+  //       Attendee: { // AttendeeFeatures
+  //         MaxCount: 2,
+  //       },
+  //     },
+  //   };
+  //   const command = new CreateMeetingCommand(input as any);
+  //   const response = await this.chime.send(command);
+  //   return response;
+  // }
+
+
+  // async createAtendee(meetingId: string, name: string) {
+  // const randomName = ["aman","sunil","amil","preet","ritik"]
+
+  //   const attendeeResponse = await this.chime.send(
+  //     new CreateAttendeeCommand({
+  //       MeetingId: meetingId,
+  //       ExternalUserId:randomName[Math.floor(Math.random()*5)],
+  //     })
+  //   );
+  //   return attendeeResponse
+  // }
+
+
+  async createMeetingWithAttendee() {
+    // const { caller, attends } = payload;
+    // console.log(caller.username, attends.username)
+    const input = { // CreateMeetingWithAttendeesRequest
+      ClientRequestToken: uuidv4(), // required
+      MediaRegion: 'us-east-1', // required
+      ExternalMeetingId: uuidv4(), // required
       MeetingFeatures: { // MeetingFeaturesConfiguration
         Audio: { // AudioFeatures
           EchoReduction: "AVAILABLE",
         },
         Video: { // VideoFeatures
-          MaxResolution: "HD",
+          MaxResolution: "HD"
+        },
+        Content: { // ContentFeatures
+          MaxResolution: "FHD",
         },
         Attendee: { // AttendeeFeatures
-          MaxCount: 3,
+          MaxCount: 2,
         },
       },
+
+      Attendees: [ // CreateMeetingWithAttendeesRequestItemList // required
+        { // CreateAttendeeRequestItem
+          ExternalUserId: SavedUser[0].username,
+          Capabilities: { // AttendeeCapabilities
+            Audio: "SendReceive",
+            Video: "SendReceive",
+            Content: "SendReceive"
+          },
+        },
+        { // CreateAttendeeRequestItem
+          ExternalUserId: SavedUser[1].username,
+          Capabilities: { // AttendeeCapabilities
+            Audio: "SendReceive",
+            Video: "SendReceive",
+            Content: "SendReceive"
+          },
+        },
+      ],
     };
-    const command = new CreateMeetingCommand(input as any);
-    const response = await this.chime.send(command);
-    return response;
+    const command = new CreateMeetingWithAttendeesCommand(input as any);
+    return await this.chime.send(command);
   }
 
-
-  async createAtendee(meetingId: string, name: string) {
-  const randomName = ["aman","sunil","amil","preet","ritik"]
-
-    const attendeeResponse = await this.chime.send(
-      new CreateAttendeeCommand({
-        MeetingId: meetingId,
-        ExternalUserId:randomName[Math.floor(Math.random()*5)],
-      })
-    );
-    return attendeeResponse
-  }
-
- 
 
 
   async fcmStatus(deviceToken?: string) {
@@ -117,8 +162,8 @@ export class ChimeService {
     return { initialized, projectId };
   }
 
-  async sendPushNotification(notification:INotification) {
-    const {name,fcmToken,meetingId}=notification
+  async sendPushNotification(notification: INotification) {
+    const { name, fcmToken, meetingId } = notification
     // if (!deviceToken) {
     //   throw new BadRequestException('Missing device token for FCM');
     // }
@@ -168,35 +213,48 @@ export class ChimeService {
       throw new BadRequestException(`FCM send failed: ${err?.message ?? 'unknown error'}`);
     }
   }
-   async call(createCallMeeting: CreateCallMeeting) {
-    const {username,attendeeId}=createCallMeeting;
-    const attendeUser=SavedUser.find((s)=>s.id==+attendeeId);
-    if(!attendeUser) throw new NotFoundException({message:"Attendee not found"})
-    const {Meeting} =  await this.createMeeting(username+attendeeId);
-    if(!Meeting?.MeetingId) throw new BadRequestException({message:"Server error exceptions"});
-    const meetingId=Meeting!.MeetingId!;
-    meetings[meetingId] = Meeting
-    console.log(" calling with meeting id",meetingId)
-    if(!meetingId) throw new BadRequestException({message:"Meeting not found"})
-    const {Attendee} = await this.createAtendee(meetingId!, "caller");
+  async call(createCallMeeting: CreateCallMeeting) {
+    const { callerId, attendeeId } = createCallMeeting;
+    // const attendeUser = SavedUser.find((s) => s.id == +attendeeId);
+    // const callerUser = SavedUser.find((s) => s.id == +callerId);
+    // if (!callerUser) throw new NotFoundException({ message: "Caller user not found" })
+    // if (!attendeUser) throw new NotFoundException({ message: "Attendee not found" })
+    const Meeting = await this.createMeetingWithAttendee();
+    if (!Meeting?.Meeting?.MeetingId) throw new BadRequestException({ message: "Server error exceptions" });
+    const meetingId = Meeting?.Meeting?.MeetingId;
+    // console.log(" calling with meeting id",meetingId)
+    // if(!meetingId) throw new BadRequestException({message:"Meeting not found"})
+    // const {Attendee} = await this.createAtendee(meetingId!, "caller");
 
     await this.sendPushNotification({
-      name:attendeUser.username,
-      fcmToken:attendeUser.fcmToken,
+      name: SavedUser[1].username,
+      fcmToken: SavedUser[1].fcmToken,
       meetingId,
     });
 
-    return {
-      Meeting,
-      Attendee,
-    };
+    return Meeting
   }
 
-  async acceptCall(accept:AcceptMeeting) {
-    const {meetingId,name}=accept;
-    const {Attendee} = await this.createAtendee(meetingId, name)
-    const Meeting = meetings[meetingId];
-    console.log("Joining call with",Meeting?.MeetingId,"and atendee ",Attendee?.AttendeeId)
-    return {Attendee,Meeting}
+  // async acceptCall(accept:AcceptMeeting) {
+  //   const {meetingId,name}=accept;
+  //   const {Attendee} = await this.createAtendee(meetingId, name)
+  //   const Meeting = meetings[meetingId];
+  //   console.log("Joining call with",Meeting?.MeetingId,"and atendee ",Attendee?.AttendeeId)
+  //   return {Attendee,Meeting}
+  // }
+
+  async getAttendeeList(MeetingId: string) {
+    const command = new ListAttendeesCommand({ MeetingId });
+    const { Attendees } = await this.chime.send(command)
+    const cmd = new GetMeetingCommand({ MeetingId });
+    const { Meeting } = await this.chime.send(cmd)
+    return {
+      Attendees,
+      Meeting
+    }
   }
+  // getmeeting(MeetingId: string) {
+  //   const command = new ListAttendeesCommand({ MeetingId });
+  //   return this.chime.send(command)
+  // }
 }

@@ -1,9 +1,11 @@
 import { IsNotEmpty, IsNumber, IsNumberString, IsString } from "class-validator";
 
 export class CreateCallMeeting{
+
     @IsNotEmpty()
     @IsString()
-    username:string
+    callerId:string;
+
 
     @IsNotEmpty()
     @IsNumberString()

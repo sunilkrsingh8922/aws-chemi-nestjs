@@ -29,6 +29,7 @@ export interface INotification{
     name:string,
     fcmToken:string;
     meetingId:string;
+    receiver:string
 }
 
 

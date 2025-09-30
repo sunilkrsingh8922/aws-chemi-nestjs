@@ -7,7 +7,6 @@ import { AcceptMeeting, CreateCallMeeting } from './dto/createCall.dto';
 export class ChimeController {
   constructor(private readonly chimeService: ChimeService) {}
 
-
   @Post('call')
   async call(@Body() body:CreateCallMeeting) {
     return await this.chimeService.call(body);

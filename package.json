@@ -24,6 +24,7 @@
     "@nestjs/common": "^11.1.6",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.1.6",
+    "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
     "aws-sdk": "^2.1692.0",

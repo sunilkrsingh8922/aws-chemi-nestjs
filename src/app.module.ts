@@ -8,12 +8,14 @@ import { UsersController } from './users/users.controller';
 
 import { UsersService } from './users/users.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AgoraNotificationModule } from './agora-notification/agora-notification.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({isGlobal:true}),
     ChimeModule,
     UsersModule,
+    AgoraNotificationModule,
   ],
   controllers: [AppController,UsersController],
   providers: [AppService,UsersService],

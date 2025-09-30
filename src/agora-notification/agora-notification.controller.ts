@@ -11,5 +11,4 @@ constructor(private readonly agoraNotificationService: AgoraNotificationService)
   create(@Body() createAgoraNotificationDto: SendAgoraNotificationDto) {
     return this.agoraNotificationService.sendNotification(createAgoraNotificationDto);
   }
-
 }
